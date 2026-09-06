@@ -1,0 +1,69 @@
+sudo apt update
+sudo apt install -y samba winbind libnss-winbind libpam-winbind krb5-user smbclient acl
+
+
+sudo mkdir -p /srv/shares/{Shared,Engineering,Projects,IT}
+sudo chmod 2770 /srv/shares/{Shared,Engineering,Projects,IT}
+
+
+[global]
+    workgroup = CORP
+    realm = CORP.DEIMUSTECH.COM
+    security = ADS
+
+    winbind use default domain = yes
+
+    idmap config * : backend = tdb
+    idmap config * : range = 3000-7999
+
+    idmap config CORP : backend = rid
+    idmap config CORP : range = 10000-999999
+
+[Shared]
+    path = /srv/shares/Shared
+    read only = no
+    browsable = yes
+
+[Engineering]
+    path = /srv/shares/Engineering
+    read only = no
+    browsable = yes
+
+[Projects]
+    path = /srv/shares/Projects
+    read only = no
+    browsable = yes
+
+[IT]
+    path = /srv/shares/IT
+    read only = no
+    browsable = yes
+
+
+
+
+sudo net ads join -U Administrator
+
+
+
+sudo systemctl enable --now smbd winbind
+sudo systemctl restart smbd winbind
+
+
+
+wbinfo -t
+wbinfo -u
+smbclient -L localhost -U Administrator
+
+
+
+
+
+
+Share Paths: 
+\\apps-01\Shared
+\\apps-01\Engineering
+\\apps-01\Projects
+\\apps-01\IT
+
+\\apps-01.corp.deimustech.com\Shared
