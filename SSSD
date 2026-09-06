@@ -50,3 +50,55 @@ sudo authselect select sssd with-mkhomedir --force
 
 sudo systemctl enable --now oddjobd
 sudo systemctl enable --now sssd
+
+
+
+
+
+
+# To opt out of the system crypto-policies configuration of krb5, remove the
+# symlink at /etc/krb5.conf.d/crypto-policies which will not be recreated.
+includedir /etc/krb5.conf.d/
+
+[logging]
+    default = FILE:/var/log/krb5libs.log
+    kdc = FILE:/var/log/krb5kdc.log
+    admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+    dns_lookup_realm = true
+    ticket_lifetime = 7d
+    renew_lifetime = 10y
+    forwardable = true
+    rdns = false
+    pkinit_anchors = FILE:/etc/pki/tls/certs/ca-bundle.crt
+    spake_preauth_groups = edwards25519
+    dns_canonicalize_hostname = fallback
+    qualify_shortname = ""
+    default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+udp_preference_limit = 0
+default_realm = CORP.DEIMUSTECH.COM
+
+[realms]
+CORP.DEIMUSTECH.COM = {
+    kdc = dc01.corp.deimustech.com
+    admin_server = dc01.corp.deimustech.com
+}
+
+[domain_realm]
+.corp.deimusetech.com = CORP.DEIMUSTECH.COM
+corp.deimustech.com = CORP.DEIMUSTECH.COM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
