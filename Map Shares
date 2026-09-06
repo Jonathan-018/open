@@ -1,0 +1,101 @@
+sudo bash <<'EOF'
+set -e
+
+# Verify AD groups resolve
+getent group 'CORP\GG-Shared'
+getent group 'CORP\GG-Engineering'
+getent group 'CORP\GG-Projects'
+getent group 'CORP\GG-IT'
+
+# Create share directories if needed
+mkdir -p /srv/shares/Shared
+mkdir -p /srv/shares/Engineering
+mkdir -p /srv/shares/Projects
+mkdir -p /srv/shares/IT
+
+# Assign each share to its AD security group
+chgrp 'CORP\GG-Shared' /srv/shares/Shared
+chgrp 'CORP\GG-Engineering' /srv/shares/Engineering
+chgrp 'CORP\GG-Projects' /srv/shares/Projects
+chgrp 'CORP\GG-IT' /srv/shares/IT
+
+# Group read/write/execute + SGID inheritance
+chmod 2770 /srv/shares/Shared
+chmod 2770 /srv/shares/Engineering
+chmod 2770 /srv/shares/Projects
+chmod 2770 /srv/shares/IT
+
+# Back up current Samba configuration
+cp /etc/samba/smb.conf /etc/samba/smb.conf.bak
+
+# Samba configuration
+cat > /etc/samba/smb.conf <<'SMBEOF'
+[global]
+    workgroup = CORP
+    realm = CORP.DEIMUSTECH.COM
+    security = ADS
+
+    winbind use default domain = yes
+
+    idmap config * : backend = tdb
+    idmap config * : range = 3000-7999
+
+    idmap config CORP : backend = rid
+    idmap config CORP : range = 10000-999999
+
+[Shared]
+    path = /srv/shares/Shared
+    read only = no
+    browsable = yes
+    valid users = @"CORP\GG-Shared"
+    force group = "CORP\GG-Shared"
+    create mask = 0660
+    directory mask = 2770
+
+[Engineering]
+    path = /srv/shares/Engineering
+    read only = no
+    browsable = yes
+    valid users = @"CORP\GG-Engineering"
+    force group = "CORP\GG-Engineering"
+    create mask = 0660
+    directory mask = 2770
+
+[Projects]
+    path = /srv/shares/Projects
+    read only = no
+    browsable = yes
+    valid users = @"CORP\GG-Projects"
+    force group = "CORP\GG-Projects"
+    create mask = 0660
+    directory mask = 2770
+
+[IT]
+    path = /srv/shares/IT
+    read only = no
+    browsable = yes
+    valid users = @"CORP\GG-IT"
+    force group = "CORP\GG-IT"
+    create mask = 0660
+    directory mask = 2770
+SMBEOF
+
+# Validate configuration
+testparm -s
+
+# Restart services
+systemctl restart smbd winbind
+
+# Verify domain trust
+net ads testjoin
+
+# Show final permissions
+ls -ld /srv/shares/*
+
+echo
+echo "Share setup complete:"
+echo '\\apps-01\Shared       -> GG-Shared'
+echo '\\apps-01\Engineering  -> GG-Engineering'
+echo '\\apps-01\Projects     -> GG-Projects'
+echo '\\apps-01\IT           -> GG-IT'
+EOF
