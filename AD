@@ -1,0 +1,185 @@
+Import-Module ActiveDirectory
+
+$DomainDN = "DC=corp,DC=deimustech,DC=com"
+$RootOU   = "OU=DeimusTech,$DomainDN"
+$UsersOU  = "OU=Users,$RootOU"
+$EmpOU    = "OU=Employees,$UsersOU"
+$AdminOU  = "OU=Admins,$UsersOU"
+$SvcOU    = "OU=Service Accounts,$UsersOU"
+$CompOU   = "OU=Computers,$RootOU"
+$ServerOU = "OU=Servers,$CompOU"
+$WksOU    = "OU=Workstations,$CompOU"
+$GroupOU  = "OU=Groups,$RootOU"
+
+# ------------------------------------------------------------
+# OUs
+# ------------------------------------------------------------
+
+$OUs = @(
+    @{Name="DeimusTech";       Path=$DomainDN},
+    @{Name="Users";            Path=$RootOU},
+    @{Name="Employees";        Path=$UsersOU},
+    @{Name="Admins";           Path=$UsersOU},
+    @{Name="Service Accounts"; Path=$UsersOU},
+    @{Name="Computers";        Path=$RootOU},
+    @{Name="Servers";          Path=$CompOU},
+    @{Name="Workstations";     Path=$CompOU},
+    @{Name="Groups";           Path=$RootOU}
+)
+
+foreach ($OU in $OUs) {
+    $DN = "OU=$($OU.Name),$($OU.Path)"
+
+    if (-not (Get-ADOrganizationalUnit -Identity $DN -ErrorAction SilentlyContinue)) {
+        New-ADOrganizationalUnit `
+            -Name $OU.Name `
+            -Path $OU.Path `
+            -ProtectedFromAccidentalDeletion $false
+    }
+}
+
+# ------------------------------------------------------------
+# Security Groups
+# ------------------------------------------------------------
+
+$Groups = @(
+    @{Name="GG-Shared";      Description="Access to the Shared file share"},
+    @{Name="GG-Engineering"; Description="Access to the Engineering file share"},
+    @{Name="GG-Projects";    Description="Access to the Projects file share"},
+    @{Name="GG-IT";          Description="Access to the IT file share"}
+)
+
+foreach ($Group in $Groups) {
+    if (-not (Get-ADGroup -Identity $Group.Name -ErrorAction SilentlyContinue)) {
+        New-ADGroup `
+            -Name $Group.Name `
+            -SamAccountName $Group.Name `
+            -GroupScope Global `
+            -GroupCategory Security `
+            -Path $GroupOU `
+            -Description $Group.Description
+    }
+}
+
+# ------------------------------------------------------------
+# User Helper
+# ------------------------------------------------------------
+
+function Set-DracoUser {
+    param(
+        [string]$Username,
+        [string]$Password,
+        [string]$Path,
+        [string]$Description
+    )
+
+    $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+    $User = Get-ADUser -Identity $Username -ErrorAction SilentlyContinue
+
+    if (-not $User) {
+        New-ADUser `
+            -Name $Username `
+            -SamAccountName $Username `
+            -UserPrincipalName "$Username@corp.deimustech.com" `
+            -Path $Path `
+            -AccountPassword $SecurePassword `
+            -Enabled $true `
+            -PasswordNeverExpires $true `
+            -Description $Description
+    }
+    else {
+        Set-ADAccountPassword `
+            -Identity $Username `
+            -Reset `
+            -NewPassword $SecurePassword
+
+        Set-ADUser `
+            -Identity $Username `
+            -Enabled $true `
+            -PasswordNeverExpires $true `
+            -Description $Description
+
+        if ($User.DistinguishedName -notlike "*$Path") {
+            Move-ADObject `
+                -Identity $User.DistinguishedName `
+                -TargetPath $Path
+        }
+    }
+}
+
+# ------------------------------------------------------------
+# Domain Users
+# ------------------------------------------------------------
+
+Set-DracoUser `
+    -Username "mreyes" `
+    -Password "MapleRoad!26" `
+    -Path $EmpOU `
+    -Description "DeimusTech Employee - Primary user for wks-01"
+
+Set-DracoUser `
+    -Username "rpatel" `
+    -Password "SilverHill!26" `
+    -Path $EmpOU `
+    -Description "DeimusTech Employee - Primary user for wks-02"
+
+Set-DracoUser `
+    -Username "scooper" `
+    -Password "CopperField!26" `
+    -Path $EmpOU `
+    -Description "DeimusTech Employee - Primary user for ws-eng-01"
+
+Set-DracoUser `
+    -Username "pkiadmin" `
+    -Password "Password1!" `
+    -Path $AdminOU `
+    -Description "DeimusTech Administrator - Certificate Authority Administrator"
+
+Set-DracoUser `
+    -Username "appadmin" `
+    -Password "StoneBridge!26" `
+    -Path $AdminOU `
+    -Description "DeimusTech Administrator - Application Administrator"
+
+# Built-in Domain Administrator stays in the normal Users container.
+Set-ADAccountPassword `
+    -Identity "Administrator" `
+    -Reset `
+    -NewPassword (ConvertTo-SecureString "Password1!" -AsPlainText -Force)
+
+Set-ADUser `
+    -Identity "Administrator" `
+    -Description "DeimusTech Built-in Domain Administrator" `
+    -PasswordNeverExpires $true
+
+# ------------------------------------------------------------
+# Share Group Membership
+# ------------------------------------------------------------
+
+$Memberships = @{
+    "GG-Shared"      = @("mreyes","rpatel","scooper","appadmin","pkiadmin")
+    "GG-Engineering" = @("mreyes","scooper")
+    "GG-Projects"    = @("mreyes","rpatel","scooper")
+    "GG-IT"          = @("appadmin","pkiadmin")
+}
+
+foreach ($Group in $Memberships.Keys) {
+    $Existing = @(Get-ADGroupMember $Group | Select-Object -ExpandProperty SamAccountName)
+
+    foreach ($User in $Memberships[$Group]) {
+        if ($User -notin $Existing) {
+            Add-ADGroupMember -Identity $Group -Members $User
+        }
+    }
+}
+
+Write-Host ""
+Write-Host "DRACO Active Directory setup complete."
+Write-Host ""
+
+Get-ADUser -Filter * -SearchBase $UsersOU |
+    Select-Object SamAccountName, Description, DistinguishedName
+
+Write-Host ""
+Get-ADGroup -Filter "Name -like 'GG-*'" -SearchBase $GroupOU |
+    Select-Object Name, Description
