@@ -1,185 +1,351 @@
+$ErrorActionPreference = "Stop"
+
 Import-Module ActiveDirectory
 
-$DomainDN = "DC=corp,DC=deimustech,DC=com"
+# ============================================================
+# DRACO - DEIMUSTECH ACTIVE DIRECTORY SETUP
+# Domain: corp.deimustech.com
+# ============================================================
+
+$Domain = Get-ADDomain
+
+if ($Domain.DNSRoot -ne "corp.deimustech.com") {
+    throw "Wrong domain. Expected corp.deimustech.com but found $($Domain.DNSRoot)"
+}
+
+$DomainDN = $Domain.DistinguishedName
+
 $RootOU   = "OU=DeimusTech,$DomainDN"
+
 $UsersOU  = "OU=Users,$RootOU"
 $EmpOU    = "OU=Employees,$UsersOU"
 $AdminOU  = "OU=Admins,$UsersOU"
 $SvcOU    = "OU=Service Accounts,$UsersOU"
+
 $CompOU   = "OU=Computers,$RootOU"
 $ServerOU = "OU=Servers,$CompOU"
 $WksOU    = "OU=Workstations,$CompOU"
+
 $GroupOU  = "OU=Groups,$RootOU"
 
-# ------------------------------------------------------------
-# OUs
-# ------------------------------------------------------------
 
-$OUs = @(
-    @{Name="DeimusTech";       Path=$DomainDN},
-    @{Name="Users";            Path=$RootOU},
-    @{Name="Employees";        Path=$UsersOU},
-    @{Name="Admins";           Path=$UsersOU},
-    @{Name="Service Accounts"; Path=$UsersOU},
-    @{Name="Computers";        Path=$RootOU},
-    @{Name="Servers";          Path=$CompOU},
-    @{Name="Workstations";     Path=$CompOU},
-    @{Name="Groups";           Path=$RootOU}
-)
+# ============================================================
+# OU CREATION
+# ============================================================
 
-foreach ($OU in $OUs) {
-    $DN = "OU=$($OU.Name),$($OU.Path)"
+function New-DracoOU {
+    param(
+        [string]$Name,
+        [string]$Path
+    )
 
-    if (-not (Get-ADOrganizationalUnit -Identity $DN -ErrorAction SilentlyContinue)) {
+    $Existing = Get-ADOrganizationalUnit `
+        -LDAPFilter "(ou=$Name)" `
+        -SearchBase $Path `
+        -SearchScope OneLevel
+
+    if (-not $Existing) {
         New-ADOrganizationalUnit `
-            -Name $OU.Name `
-            -Path $OU.Path `
+            -Name $Name `
+            -Path $Path `
             -ProtectedFromAccidentalDeletion $false
+
+        Write-Host "Created OU: $Name"
+    }
+    else {
+        Write-Host "OU exists: $Name"
     }
 }
 
-# ------------------------------------------------------------
-# Security Groups
-# ------------------------------------------------------------
 
-$Groups = @(
-    @{Name="GG-Shared";      Description="Access to the Shared file share"},
-    @{Name="GG-Engineering"; Description="Access to the Engineering file share"},
-    @{Name="GG-Projects";    Description="Access to the Projects file share"},
-    @{Name="GG-IT";          Description="Access to the IT file share"}
-)
+New-DracoOU "DeimusTech" $DomainDN
 
-foreach ($Group in $Groups) {
-    if (-not (Get-ADGroup -Identity $Group.Name -ErrorAction SilentlyContinue)) {
+New-DracoOU "Users" $RootOU
+New-DracoOU "Computers" $RootOU
+New-DracoOU "Groups" $RootOU
+
+New-DracoOU "Employees" $UsersOU
+New-DracoOU "Admins" $UsersOU
+New-DracoOU "Service Accounts" $UsersOU
+
+New-DracoOU "Servers" $CompOU
+New-DracoOU "Workstations" $CompOU
+
+
+# ============================================================
+# SECURITY GROUPS
+# ============================================================
+
+function New-DracoGroup {
+    param(
+        [string]$Name,
+        [string]$Description
+    )
+
+    $Existing = Get-ADGroup `
+        -Filter "SamAccountName -eq '$Name'"
+
+    if (-not $Existing) {
         New-ADGroup `
-            -Name $Group.Name `
-            -SamAccountName $Group.Name `
+            -Name $Name `
+            -SamAccountName $Name `
             -GroupScope Global `
             -GroupCategory Security `
             -Path $GroupOU `
-            -Description $Group.Description
+            -Description $Description
+
+        Write-Host "Created group: $Name"
+    }
+    else {
+        Set-ADGroup `
+            -Identity $Existing `
+            -Description $Description
+
+        Write-Host "Group exists: $Name"
     }
 }
 
-# ------------------------------------------------------------
-# User Helper
-# ------------------------------------------------------------
+
+New-DracoGroup "GG-Shared" `
+    "DeimusTech users authorized for the Shared file share"
+
+New-DracoGroup "GG-Engineering" `
+    "DeimusTech Engineering users authorized for the Engineering file share"
+
+New-DracoGroup "GG-Projects" `
+    "DeimusTech users authorized for the Projects file share"
+
+New-DracoGroup "GG-IT" `
+    "DeimusTech IT administrators authorized for the IT file share"
+
+
+# ============================================================
+# DOMAIN USER CREATION / UPDATE
+# ============================================================
 
 function Set-DracoUser {
     param(
         [string]$Username,
         [string]$Password,
-        [string]$Path,
+        [string]$OU,
         [string]$Description
     )
 
-    $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
-    $User = Get-ADUser -Identity $Username -ErrorAction SilentlyContinue
+    $SecurePassword = ConvertTo-SecureString `
+        $Password `
+        -AsPlainText `
+        -Force
+
+    $User = Get-ADUser `
+        -Filter "SamAccountName -eq '$Username'" `
+        -Properties DistinguishedName
 
     if (-not $User) {
+
         New-ADUser `
             -Name $Username `
             -SamAccountName $Username `
             -UserPrincipalName "$Username@corp.deimustech.com" `
-            -Path $Path `
+            -Path $OU `
             -AccountPassword $SecurePassword `
             -Enabled $true `
             -PasswordNeverExpires $true `
+            -ChangePasswordAtLogon $false `
             -Description $Description
+
+        Write-Host "Created user: $Username"
     }
     else {
+
         Set-ADAccountPassword `
-            -Identity $Username `
+            -Identity $User `
             -Reset `
             -NewPassword $SecurePassword
 
         Set-ADUser `
-            -Identity $Username `
-            -Enabled $true `
+            -Identity $User `
+            -UserPrincipalName "$Username@corp.deimustech.com" `
+            -Description $Description `
             -PasswordNeverExpires $true `
-            -Description $Description
+            -ChangePasswordAtLogon $false
 
-        if ($User.DistinguishedName -notlike "*$Path") {
+        Enable-ADAccount -Identity $User
+
+        if ($User.DistinguishedName -notlike "*,$OU") {
             Move-ADObject `
                 -Identity $User.DistinguishedName `
-                -TargetPath $Path
+                -TargetPath $OU
+
+            Write-Host "Moved user to correct OU: $Username"
         }
+
+        Write-Host "Updated user: $Username"
     }
 }
 
-# ------------------------------------------------------------
-# Domain Users
-# ------------------------------------------------------------
+
+# ============================================================
+# EMPLOYEES
+# ============================================================
 
 Set-DracoUser `
-    -Username "mreyes" `
-    -Password "MapleRoad!26" `
-    -Path $EmpOU `
-    -Description "DeimusTech Employee - Primary user for wks-01"
+    "mreyes" `
+    "MapleRoad!26" `
+    $EmpOU `
+    "DeimusTech Employee - Primary user of wks-01"
 
 Set-DracoUser `
-    -Username "rpatel" `
-    -Password "SilverHill!26" `
-    -Path $EmpOU `
-    -Description "DeimusTech Employee - Primary user for wks-02"
+    "rpatel" `
+    "SilverHill!26" `
+    $EmpOU `
+    "DeimusTech Employee - Primary user of wks-02"
 
 Set-DracoUser `
-    -Username "scooper" `
-    -Password "CopperField!26" `
-    -Path $EmpOU `
-    -Description "DeimusTech Employee - Primary user for ws-eng-01"
+    "scooper" `
+    "CopperField!26" `
+    $EmpOU `
+    "DeimusTech Employee - Primary user of ws-eng-01"
+
+
+# ============================================================
+# ADMINISTRATORS
+# ============================================================
 
 Set-DracoUser `
-    -Username "pkiadmin" `
-    -Password "Password1!" `
-    -Path $AdminOU `
-    -Description "DeimusTech Administrator - Certificate Authority Administrator"
+    "pkiadmin" `
+    "Password1!" `
+    $AdminOU `
+    "DeimusTech Administrator - Certificate Authority Administrator"
 
 Set-DracoUser `
-    -Username "appadmin" `
-    -Password "StoneBridge!26" `
-    -Path $AdminOU `
-    -Description "DeimusTech Administrator - Application Administrator"
+    "appadmin" `
+    "StoneBridge!26" `
+    $AdminOU `
+    "DeimusTech Administrator - Application Administrator"
 
-# Built-in Domain Administrator stays in the normal Users container.
+
+# ============================================================
+# BUILT-IN DOMAIN ADMINISTRATOR
+# ============================================================
+
+$Administrator = Get-ADUser -Identity "Administrator"
+
+$AdminPassword = ConvertTo-SecureString `
+    "Password1!" `
+    -AsPlainText `
+    -Force
+
 Set-ADAccountPassword `
-    -Identity "Administrator" `
+    -Identity $Administrator `
     -Reset `
-    -NewPassword (ConvertTo-SecureString "Password1!" -AsPlainText -Force)
+    -NewPassword $AdminPassword
 
 Set-ADUser `
-    -Identity "Administrator" `
+    -Identity $Administrator `
     -Description "DeimusTech Built-in Domain Administrator" `
-    -PasswordNeverExpires $true
+    -PasswordNeverExpires $true `
+    -ChangePasswordAtLogon $false
 
-# ------------------------------------------------------------
-# Share Group Membership
-# ------------------------------------------------------------
+Enable-ADAccount -Identity $Administrator
 
-$Memberships = @{
-    "GG-Shared"      = @("mreyes","rpatel","scooper","appadmin","pkiadmin")
-    "GG-Engineering" = @("mreyes","scooper")
-    "GG-Projects"    = @("mreyes","rpatel","scooper")
-    "GG-IT"          = @("appadmin","pkiadmin")
-}
+Write-Host "Updated built-in Administrator"
 
-foreach ($Group in $Memberships.Keys) {
-    $Existing = @(Get-ADGroupMember $Group | Select-Object -ExpandProperty SamAccountName)
 
-    foreach ($User in $Memberships[$Group]) {
-        if ($User -notin $Existing) {
-            Add-ADGroupMember -Identity $Group -Members $User
-        }
+# ============================================================
+# GROUP MEMBERSHIP
+# ============================================================
+
+function Add-DracoGroupMember {
+    param(
+        [string]$Group,
+        [string]$Username
+    )
+
+    $CurrentMembers = Get-ADGroupMember `
+        -Identity $Group
+
+    $Exists = $CurrentMembers |
+        Where-Object { $_.SamAccountName -eq $Username }
+
+    if (-not $Exists) {
+        Add-ADGroupMember `
+            -Identity $Group `
+            -Members $Username
+
+        Write-Host "Added $Username to $Group"
+    }
+    else {
+        Write-Host "$Username already in $Group"
     }
 }
 
+
+# Shared
+Add-DracoGroupMember "GG-Shared" "mreyes"
+Add-DracoGroupMember "GG-Shared" "rpatel"
+Add-DracoGroupMember "GG-Shared" "scooper"
+Add-DracoGroupMember "GG-Shared" "appadmin"
+Add-DracoGroupMember "GG-Shared" "pkiadmin"
+
+# Engineering
+Add-DracoGroupMember "GG-Engineering" "mreyes"
+Add-DracoGroupMember "GG-Engineering" "scooper"
+
+# Projects
+Add-DracoGroupMember "GG-Projects" "mreyes"
+Add-DracoGroupMember "GG-Projects" "rpatel"
+Add-DracoGroupMember "GG-Projects" "scooper"
+
+# IT
+Add-DracoGroupMember "GG-IT" "appadmin"
+Add-DracoGroupMember "GG-IT" "pkiadmin"
+
+
+# ============================================================
+# VERIFICATION
+# ============================================================
+
 Write-Host ""
-Write-Host "DRACO Active Directory setup complete."
+Write-Host "============================================"
+Write-Host " DRACO ACTIVE DIRECTORY SETUP COMPLETE"
+Write-Host "============================================"
 Write-Host ""
 
-Get-ADUser -Filter * -SearchBase $UsersOU |
-    Select-Object SamAccountName, Description, DistinguishedName
+Write-Host "OUs:"
+Get-ADOrganizationalUnit `
+    -Filter * `
+    -SearchBase $RootOU |
+    Select-Object Name, DistinguishedName
 
 Write-Host ""
-Get-ADGroup -Filter "Name -like 'GG-*'" -SearchBase $GroupOU |
+
+Write-Host "Users:"
+Get-ADUser `
+    -Filter * `
+    -SearchBase $UsersOU `
+    -Properties Description |
+    Select-Object SamAccountName, Enabled, Description
+
+Write-Host ""
+
+Write-Host "Groups:"
+Get-ADGroup `
+    -Filter "Name -like 'GG-*'" `
+    -SearchBase $GroupOU `
+    -Properties Description |
     Select-Object Name, Description
+
+Write-Host ""
+
+Write-Host "Group Membership:"
+foreach ($Group in @(
+    "GG-Shared",
+    "GG-Engineering",
+    "GG-Projects",
+    "GG-IT"
+)) {
+    Write-Host ""
+    Write-Host "$Group"
+    Get-ADGroupMember $Group |
+        Select-Object Name, SamAccountName
+}
