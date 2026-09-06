@@ -1,0 +1,52 @@
+sudo dnf install -y realmd sssd sssd-ad sssd-tools adcli oddjob oddjob-mkhomedir samba-common-tools krb5-workstation authselect
+
+
+sudo realm leave corp.deimustech.com 2>/dev/null || true
+sudo systemctl disable --now sssd 2>/dev/null || true
+sudo rm -f /etc/sssd/sssd.conf
+sudo rm -f /etc/krb5.keytab
+sudo rm -rf /var/lib/sss/db/*
+sudo rm -rf /var/lib/sss/mc/*
+sudo sss_cache -E 2>/dev/null || true
+
+hostname -f
+cat /etc/resolv.conf
+
+realm discover corp.deimustech.com
+
+sudo realm join --client-software=sssd --membership-software=adcli --user=Administrator corp.deimustech.com
+
+realm list
+
+
+sudo tee /etc/sssd/sssd.conf >/dev/null <<'EOF'
+[sssd]
+services = nss, pam
+config_file_version = 2
+domains = corp.deimustech.com
+
+[domain/corp.deimustech.com]
+id_provider = ad
+auth_provider = ad
+chpass_provider = ad
+
+ad_domain = corp.deimustech.com
+ad_server = dc01.corp.deimustech.com
+krb5_realm = CORP.DEIMUSTECH.COM
+
+access_provider = permit
+ad_gpo_access_control = permissive
+
+krb5_ccname_template = FILE:/tmp/krb5cc_%U
+
+[pam]
+reconnection_retries = 3
+EOF
+
+sudo chmod 600 /etc/sssd/sssd.conf
+sudo chown root:root /etc/sssd/sssd.conf
+
+sudo authselect select sssd with-mkhomedir --force
+
+sudo systemctl enable --now oddjobd
+sudo systemctl enable --now sssd
