@@ -1,0 +1,132 @@
+sudo apt update
+sudo DEBIAN_FRONTEND=noninteractive apt install -y git curl wget jq unzip p7zip-full zip tmux nano vim tree rsync chrony openssh-client openssh-server net-tools iproute2 dnsutils whois traceroute mtr-tiny tcpdump tshark wireshark netcat-openbsd socat proxychains4 telnet ldap-utils krb5-user smbclient cifs-utils samba-common-bin snmp snmp-mibs-downloader python3 python3-pip python3-venv pipx build-essential gcc g++ make cmake pkg-config golang-go default-jre nodejs npm ruby-full docker.io docker-compose-v2 nmap masscan nikto sqlmap seclists remmina libreoffice
+sudo apt install -y freerdp3-x11 || sudo apt install -y freerdp2-x11sudo env PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install impacket
+sudo env PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install bloodhound
+sudo env PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install ldapdomaindump
+sudo env PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install git+https://github.com/Pennyw0rth/NetExec
+sudo gem install evil-winrm
+sudo env GOBIN=/usr/local/bin go install github.com/ffuf/ffuf/v2@latest
+sudo env GOBIN=/usr/local/bin go install github.com/OJ/gobuster/v3@latest
+sudo env GOBIN=/usr/local/bin go install github.com/epi052/feroxbuster@latest
+sudo env GOBIN=/usr/local/bin go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+sudo env GOBIN=/usr/local/bin go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+nuclei -update-templates
+sudo env GOBIN=/usr/local/bin go install github.com/jpillora/chisel@latest
+sudo mkdir -p /opt/draco/tools/{linux,windows,pivoting,ad,web}
+sudo chown -R "$USER":"$USER" /opt/draco
+sudo mkdir -p /opt/draco/{cves,engagements,loot,evidence,notes,scans,payloads,captures,wordlists,tools}
+sudo chown -R "$USER":"$USER" /opt/draco
+mkdir -p /opt/draco/engagements/BLACK-HARBOR/{scope,operations,credentials,targets,timeline,findings,loot,evidence,screenshots}
+chmod 700 /opt/draco/engagements/BLACK-HARBOR/credentials /opt/draco/engagements/BLACK-HARBOR/loot
+
+sudo tee -a /etc/hosts.bak >/dev/null <<'EOF'
+172.16.113.66 teamserver
+172.16.100.150 redirector
+172.16.100.50 public-web-01 holloway-systems.com www.holloway-systems.com
+192.168.100.3 deimustech.com www.deimustech.com
+192.168.150.10 portal-01
+192.168.200.10 dc01 dc01.corp.deimustech.com
+192.168.200.20 ca01 ca01.corp.deimustech.com
+192.168.200.44 apps-01 apps.corp.deimustech.com
+192.168.200.101 ws-fin-01
+192.168.200.102 ws-hr-01
+192.168.200.103 ws-eng-01
+EOF
+
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+sudo cp /etc/proxychains4.conf /etc/proxychains4.conf.original
+mkdir -p ~/.config/draco
+cp /etc/proxychains4.conf ~/.config/draco/proxychains-direct.conf
+sudo snap install zaproxy --classic
+
+for cmd in nmap masscan nuclei httpx naabu ffuf feroxbuster gobuster sqlmap impacket-smbclient nxc certipy bloodhound-python evil-winrm proxychains4 chisel; do command -v "$cmd" >/dev/null && echo "[OK] $cmd" || echo "[MISSING] $cmd"; done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
