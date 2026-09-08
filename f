@@ -1,9 +1,37 @@
-sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -nostdinc -I. -I/usr/src/sys -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -soft-float -c src/deepbg.c -o deepbg.o
-
-
+# 1. Compile all Core Kernel Modules and Dependencies
 sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/deepbg.c -o deepbg.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/file_redirection.c -o file_redirection.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/kld_hiding.c -o kld_hiding.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/kmalloc.c -o kmalloc.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/kmalloc-patch.c -o kmalloc-patch.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/knighted.c -o knighted.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/kvm-write.c -o kvm-write.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/order_66.c -o order_66.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/shdw_lookup.c -o shdw_lookup.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/shdw_sysent_tbl.c -o shdw_sysent_tbl.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/stash.c -o stash.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/whisper.c -o whisper.o
 
+# 2. Compile User-Space Interfaces and Utility Binaries
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/interface-deepbg.c -o interface-deepbg
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/interface-kmalloc.c -o interface-kmalloc
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/interface-lookup.c -o interface-lookup
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/interface-whisper.c -o interface-whisper
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/knight-me.c -o knight-me
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/loader.c -o loader
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/trigger.c -o trigger
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -I. -I/usr/include src/test-kmalloc-patch.c -o test-kmalloc-patch
 
-
-
-
+# 3. Link Kernel Objects into Finished Payloads (.ko)
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o deepbg.ko deepbg.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o file_redirection.ko file_redirection.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o kld_hiding.ko kld_hiding.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o kmalloc.ko kmalloc.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o kmalloc-patch.ko kmalloc-patch.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o knighted.ko knighted.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o kvm-write.ko kvm-write.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o order_66.ko order_66.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o shdw_lookup.ko shdw_lookup.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o shdw_sysent_tbl.ko shdw_sysent_tbl.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o stash.ko stash.o
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-ld -m elf_x86_64_fbsd -shared -o whisper.ko whisper.o
