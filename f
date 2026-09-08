@@ -1,1 +1,9 @@
 sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -nostdinc -I. -I/usr/src/sys -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -soft-float -c src/deepbg.c -o deepbg.o
+
+
+sudo docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/workdir -w /workdir freebsd-cross:14.0 freebsd-cc -O2 -pipe -D_KERNEL -DKLD_MODULE -I. -I/usr/include -fno-common -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-aes -mno-avx -msoft-float -c src/deepbg.c -o deepbg.o
+
+
+
+
+
