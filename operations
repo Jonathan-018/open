@@ -51,6 +51,38 @@ for cmd in nmap masscan nuclei httpx naabu ffuf feroxbuster gobuster sqlmap impa
 
 
 
+sudo DEBIAN_FRONTEND=noninteractive apt install -y git curl wget jq unzip zip tmux nano vim tree rsync chrony openssh-server auditd audispd-plugins acct logrotate nginx docker.io docker-compose-v2 python3 python3-pip python3-venv build-essential default-jre-headless golang-go tcpdump tshark netcat-openbsd socat
+
+
+
+
+
+
+
+
+
+
+
+
+
+sudo DEBIAN_FRONTEND=noninteractive apt install -y openssh-server nginx haproxy socat tcpdump chrony auditd logrotate curl jq
+sudo systemctl enable --now ssh chrony auditd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
